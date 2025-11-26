@@ -1,0 +1,365 @@
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h2 class="mb-1">
+            <i class="bi bi-exclamation-triangle"></i> Incidentes
+            
+            <!-- 🔒 BOTÓN SECRETO DE EDITOR (Solo Admin) -->
+            <button 
+              class="btn btn-sm ms-2" 
+              [ngClass]="modoEditor ? 'btn-danger' : 'btn-outline-secondary'"
+              (click)="activarModoEditor()"
+              title="Modo Editor"
+              style="font-size: 0.7rem;"
+              *ngIf="isAdmin">
+              <i class="bi" [ngClass]="modoEditor ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
+            </button>
+          </h2>
+          <p class="text-muted">
+            <span *ngIf="isAdmin">Todos los reportes de incidentes</span>
+            <span *ngIf="isAmaDeLlaves">Reportar y gestionar incidentes</span>
+            <span class="badge bg-danger ms-2" *ngIf="modoEditor">
+              <i class="bi bi-exclamation-triangle"></i> MODO EDITOR ACTIVO
+            </span>
+          </p>
+        </div>
+        <div class="d-flex gap-2">
+          <!-- 🆕 FILTRO POR TRABAJADOR (Solo Admin) -->
+          <div class="input-group" style="max-width: 300px;" *ngIf="isAdmin">
+            <span class="input-group-text">
+              <i class="bi bi-person"></i>
+            </span>
+            <select class="form-select" [(ngModel)]="trabajadorSeleccionado" name="filtroTrabajador">
+              <option value="">Todos los trabajadores</option>
+              <option *ngFor="let trabajador of trabajadoresFiltro" [value]="trabajador.id">
+                {{ trabajador.nombre }}
+              </option>
+            </select>
+            <button class="btn btn-outline-secondary" (click)="limpiarFiltro()" *ngIf="trabajadorSeleccionado">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+
+          <!-- Botón Historial -->
+          <button class="btn btn-outline-primary" (click)="abrirModalHistorial()">
+            <i class="bi bi-calendar-event"></i> Historial
+          </button>
+          
+          <!-- Botón Reportar (Solo Ama de Llaves) -->
+          <button class="btn btn-primary" (click)="abrirModal()" *ngIf="isAmaDeLlaves">
+            <i class="bi bi-plus-circle"></i> Reportar Incidente
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🆕 Badge de filtro activo -->
+  <div class="alert alert-info mb-3" *ngIf="trabajadorSeleccionado">
+    <i class="bi bi-info-circle"></i> 
+Mostrando <strong>{{ incidentesFiltrados.length }}</strong> incidentes asignados a 
+<strong>{{ getNombreTrabajador(trabajadorSeleccionado) }}</strong>
+  </div>
+
+  <!-- Tabla de Incidentes -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Área</th>
+              <th>Descripción</th>
+              <th>Prioridad</th>
+              <th>Estado</th>
+              <th>Asignado a</th>
+              <th>Reportado por</th>
+              <th>Fecha</th>
+              <th>Observaciones</th>
+              <th *ngIf="isAdmin">Acciones Admin</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let inc of incidentesFiltrados">
+              <td>
+                <span class="badge bg-secondary">{{ inc.area }}</span>
+              </td>
+              <td style="max-width: 300px;">
+                <small class="text-wrap">{{ inc.descripcion }}</small>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="getPrioridadBadgeClass(inc.prioridad)">
+                  {{ inc.prioridad }}
+                </span>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="getEstadoBadgeClass(inc.estado)">
+                  {{ inc.estado }}
+                </span>
+              </td>
+              <td>
+                <small>{{ inc.nombre_mantenimiento_asignado || 'Sin asignar' }}</small>
+              </td>
+              <td>
+                <small>{{ inc.nombre_ama_llaves }}</small>
+              </td>
+              <td>
+                <small>{{ formatearFecha(inc.fecha_reporte) }}</small>
+              </td>
+              <td style="max-width: 300px;">
+                <!-- Observaciones del AMA DE LLAVES -->
+                <div *ngIf="inc.observaciones_ama" class="mb-2">
+                  <span class="badge bg-info mb-1">
+                    <i class="bi bi-person-fill"></i> Ama de Llaves
+                  </span>
+                  <small class="d-block text-wrap">{{ inc.observaciones_ama }}</small>
+                </div>
+                
+                <!-- Observaciones del MANTENIMIENTO -->
+                <div *ngIf="inc.trabajo_realizado" class="mb-2">
+                  <span class="badge bg-success mb-1">
+                    <i class="bi bi-tools"></i> Mantenimiento
+                  </span>
+                  <small class="d-block text-wrap">{{ inc.trabajo_realizado }}</small>
+                </div>
+
+                <!-- Botón para ama de llaves agregar observación -->
+                <button 
+                  class="btn btn-sm btn-outline-primary mt-2" 
+                  (click)="agregarObservacion(inc)"
+                  *ngIf="isAmaDeLlaves && inc.estado === 'completado' && !inc.observaciones_ama">
+                  <i class="bi bi-chat-left-text"></i> Agregar Observación
+                </button>
+
+                <span 
+                  class="badge bg-secondary mt-2" 
+                  *ngIf="!inc.observaciones_ama && !inc.trabajo_realizado && inc.estado !== 'completado'">
+                  <i class="bi bi-hourglass-split"></i> Sin observaciones
+                </span>
+              </td>
+
+              <!-- ACCIONES ADMIN -->
+              <td *ngIf="isAdmin">
+                <div class="btn-group-vertical btn-group-sm">
+                  <!-- Editar (Pendiente) -->
+                  <button 
+                    class="btn btn-warning mb-1" 
+                    (click)="editarIncidente(inc)"
+                    *ngIf="inc.estado === 'pendiente'">
+                    <i class="bi bi-pencil"></i> Editar
+                  </button>
+
+                  <!-- Iniciar (Pendiente) -->
+                  <button 
+                    class="btn btn-success mb-1" 
+                    (click)="iniciarIncidenteAdmin(inc)"
+                    *ngIf="inc.estado === 'pendiente'">
+                    <i class="bi bi-play-fill"></i> Iniciar
+                  </button>
+
+                  <!-- Eliminar -->
+                  <button 
+                    class="btn btn-danger mb-1" 
+                    (click)="eliminarIncidente(inc)">
+                    <i class="bi bi-trash"></i> Eliminar
+                  </button>
+
+                  <!-- Reabrir (Completado + Modo Editor) -->
+                  <button 
+                    class="btn btn-outline-warning mb-1" 
+                    (click)="reabrirIncidente(inc)"
+                    *ngIf="inc.estado === 'completado' && modoEditor">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reabrir
+                  </button>
+
+                  <!-- Badge Completado -->
+                  <span class="badge bg-success" *ngIf="inc.estado === 'completado' && !modoEditor">
+                    <i class="bi bi-check-circle-fill"></i> Completado
+                  </span>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="incidentesFiltrados.length === 0">
+              <td [attr.colspan]="isAdmin ? 9 : 8" class="text-center text-muted py-4">
+                <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                <p class="mb-0 mt-2">
+                  {{ trabajadorSeleccionado ? 'No hay incidentes para este trabajador' : 'No hay incidentes registrados' }}
+                </p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Reportar Incidente (SIMPLIFICADO) -->
+<div class="modal fade show" [class.d-block]="mostrarModal" 
+     [style.background]="mostrarModal ? 'rgba(0,0,0,0.5)' : 'none'" 
+     *ngIf="mostrarModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-exclamation-triangle"></i> 
+          Reportar Incidente
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="cerrarModal()"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">
+                <i class="bi bi-geo-alt"></i> Área <span class="text-danger">*</span>
+              </label>
+              <select class="form-select" [(ngModel)]="nuevoIncidente.area" name="area" required>
+                <option value="">Seleccionar área</option>
+                <option *ngFor="let area of areas" [value]="area.nombre">
+                  {{ area.nombre }}
+                </option>
+              </select>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label class="form-label">
+                <i class="bi bi-exclamation-triangle"></i> Prioridad
+              </label>
+              <select class="form-select" [(ngModel)]="nuevoIncidente.prioridad" name="prioridad">
+                <option value="baja">Baja</option>
+                <option value="media">Media</option>
+                <option value="alta">Alta</option>
+                <option value="urgente">Urgente</option>
+              </select>
+            </div>
+
+            <div class="col-12 mb-3">
+              <label class="form-label">
+                <i class="bi bi-file-text"></i> Descripción del Problema <span class="text-danger">*</span>
+              </label>
+              <textarea 
+                class="form-control" 
+                [(ngModel)]="nuevoIncidente.descripcion" 
+                name="descripcion" 
+                rows="6"
+                placeholder="Describe detalladamente el problema encontrado.
+
+Incluye:
+- Si es en habitación, especifica el número de habitación.
+- Qué está fallando exactamente.
+- Cualquier detalle importante."
+                required></textarea>
+              <small class="text-muted">
+                <i class="bi bi-info-circle"></i> Tip: Sé lo más específico posible para que mantenimiento pueda atender rápidamente
+              </small>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModal()">
+          <i class="bi bi-x-circle"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" (click)="guardarIncidente()">
+          <i class="bi bi-send"></i> Reportar Incidente
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Historial por Día -->
+<div class="modal fade show" [class.d-block]="mostrarModalHistorial" 
+     [style.background]="mostrarModalHistorial ? 'rgba(0,0,0,0.5)' : 'none'" 
+     *ngIf="mostrarModalHistorial">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-calendar-event"></i> Historial de Incidentes por Día
+        </h5>
+        <button type="button" class="btn-close" (click)="cerrarModalHistorial()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label">Seleccionar Fecha</label>
+            <input 
+              type="date" 
+              class="form-control" 
+              [(ngModel)]="fechaHistorial"
+              (change)="cargarHistorial()"
+              name="fecha">
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+            <button class="btn btn-primary" (click)="generarReporteDiario()">
+              <i class="bi bi-file-pdf"></i> Generar Reporte PDF
+            </button>
+          </div>
+        </div>
+
+        <div class="alert alert-info" *ngIf="incidentesHistorial.length > 0">
+          <strong>Total de incidentes reportados:</strong> {{ incidentesHistorial.length }}
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>Área</th>
+                <th>Descripción</th>
+                <th>Estado</th>
+                <th>Asignado a</th>
+                <th>Hora</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let inc of incidentesHistorial; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>
+                  <span class="badge bg-secondary">{{ inc.area }}</span>
+                </td>
+                <td>
+                  <small>{{ inc.descripcion }}</small>
+                </td>
+                <td>
+                  <span class="badge" [ngClass]="getEstadoBadgeClass(inc.estado)">
+                    {{ inc.estado }}
+                  </span>
+                </td>
+                <td>
+                  <small>{{ inc.nombre_mantenimiento_asignado || 'Sin asignar' }}</small>
+                </td>
+                <td>
+                  <small>{{ formatearFecha(inc.fecha_reporte) }}</small>
+                </td>
+              </tr>
+              <tr *ngIf="incidentesHistorial.length === 0">
+                <td colspan="6" class="text-center text-muted py-4">
+                  No hay incidentes para la fecha seleccionada
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModalHistorial()">
+          <i class="bi bi-x-circle"></i> Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Alerta -->
+<app-modal-alerta 
+  [mostrar]="mostrarAlerta"
+  [mensaje]="mensajeAlerta"
+  [tipo]="tipoAlerta"
+  (cerrar)="cerrarAlerta()">
+</app-modal-alerta>

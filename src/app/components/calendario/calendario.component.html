@@ -1,0 +1,206 @@
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h2 class="mb-1">
+            <i class="bi bi-calendar3"></i> Calendario de Mantenimientos
+          </h2>
+          <p class="text-muted mb-0">
+            <i class="bi bi-info-circle"></i> Vista de solo lectura - Los eventos se agregan desde Mantenimiento
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controles del Calendario -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <button class="btn btn-outline-primary" (click)="mesAnterior()">
+          <i class="bi bi-chevron-left"></i> <span class="d-none d-sm-inline">Anterior</span>
+        </button>
+        
+        <h4 class="mb-0 text-capitalize">{{ nombreMes }}</h4>
+        
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary" (click)="hoyClick()">
+            <i class="bi bi-calendar-today"></i> <span class="d-none d-sm-inline">Hoy</span>
+          </button>
+
+              <!-- 🧹 BOTÓN TEMPORAL DE LIMPIEZA -->
+            <button class="btn btn-warning" (click)="limpiarEventosHuerfanos()" *ngIf="isAdmin">
+             <i class="bi bi-trash"></i> Limpiar Huérfanos
+            </button>
+
+          <button class="btn btn-outline-primary" (click)="mesSiguiente()">
+            <span class="d-none d-sm-inline">Siguiente</span> <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Calendario -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="calendario-grid">
+        <!-- Encabezado de días (Responsivo) -->
+        <div class="dia-header">
+          <span class="d-none d-md-inline dia-header-full">Domingo</span>
+          <span class="d-md-none dia-header-short">Dom</span>
+        </div>
+        <div class="dia-header">
+          <span class="d-none d-md-inline dia-header-full">Lunes</span>
+          <span class="d-md-none dia-header-short">Lun</span>
+        </div>
+        <div class="dia-header">
+          <span class="d-none d-md-inline dia-header-full">Martes</span>
+          <span class="d-md-none dia-header-short">Mar</span>
+        </div>
+        <div class="dia-header">
+          <span class="d-none d-md-inline dia-header-full">Miércoles</span>
+          <span class="d-md-none dia-header-short">Mié</span>
+        </div>
+        <div class="dia-header">
+          <span class="d-none d-md-inline dia-header-full">Jueves</span>
+          <span class="d-md-none dia-header-short">Jue</span>
+        </div>
+        <div class="dia-header">
+          <span class="d-none d-md-inline dia-header-full">Viernes</span>
+          <span class="d-md-none dia-header-short">Vie</span>
+        </div>
+        <div class="dia-header">
+          <span class="d-none d-md-inline dia-header-full">Sábado</span>
+          <span class="d-md-none dia-header-short">Sáb</span>
+        </div>
+
+        <!-- Días del mes (CON INDICADORES) -->
+        <div 
+          *ngFor="let dia of diasCalendario" 
+          class="dia-celda"
+          [class.dia-vacio]="!dia.dia"
+          [class.dia-hoy]="dia.esHoy"
+          [class.tiene-eventos]="dia.eventos && dia.eventos.length > 0"
+          (click)="verEventosDelDia(dia)">
+          
+          <!-- Número del día -->
+          <div class="dia-numero" *ngIf="dia.dia">
+            {{ dia.dia }}
+            <span class="badge bg-primary rounded-pill" *ngIf="dia.eventos && dia.eventos.length > 0">
+              {{ dia.eventos.length }}
+            </span>
+          </div>
+
+          <!-- 🆕 INDICADORES CON PUNTOS (por prioridad) -->
+          <div class="eventos-indicador" *ngIf="dia.eventos && dia.eventos.length > 0">
+            <span 
+              *ngFor="let evento of dia.eventos.slice(0, 5)" 
+              class="evento-punto"
+              [class.baja]="evento.prioridad === 'baja'"
+              [class.media]="evento.prioridad === 'media'"
+              [class.alta]="evento.prioridad === 'alta'"
+              [class.urgente]="evento.prioridad === 'urgente'"
+              [title]="evento.titulo">
+            </span>
+            <span *ngIf="dia.eventos.length > 5" class="badge bg-secondary" style="font-size: 0.65rem;">
+              +{{ dia.eventos.length - 5 }}
+            </span>
+          </div>
+
+          <!-- Contador de eventos (oculto en móvil) -->
+          <div class="eventos-contador d-none d-lg-block" *ngIf="dia.eventos && dia.eventos.length > 0">
+            <i class="bi bi-calendar-check"></i> {{ dia.eventos.length }} evento{{ dia.eventos.length > 1 ? 's' : '' }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Modal Eventos del Día (MEJORADO Y RESPONSIVO) -->
+<div class="modal fade show" [class.d-block]="mostrarEventosDelDia" 
+     [style.background]="mostrarEventosDelDia ? 'rgba(0,0,0,0.5)' : 'none'" 
+     *ngIf="mostrarEventosDelDia">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-calendar-event"></i> 
+          {{ diaSeleccionado | date:'EEEE, dd \'de\' MMMM \'de\' yyyy':'es-MX' }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="cerrarEventosDelDia()"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Lista de eventos -->
+        <div class="list-group">
+          <div 
+            *ngFor="let evento of eventosDelDia" 
+            class="list-group-item evento-detalle-card mb-3"
+            [style.border-left-color]="getColorEvento(evento.prioridad)">
+            
+            <div class="d-flex w-100 justify-content-between align-items-start mb-2">
+              <h6 class="mb-0">
+                <i class="bi bi-circle-fill me-2" [style.color]="getColorEvento(evento.prioridad)"></i>
+                {{ evento.titulo }}
+              </h6>
+              <span class="badge" [ngClass]="getEstadoBadgeClass(evento.estado)">
+                {{ evento.estado }}
+              </span>
+            </div>
+
+            <p class="mb-2 text-muted" *ngIf="evento.descripcion">
+              <small><i class="bi bi-file-text"></i> {{ evento.descripcion }}</small>
+            </p>
+
+            <div class="d-flex gap-2 flex-wrap">
+              <span class="badge" [ngClass]="getPrioridadBadgeClass(evento.prioridad)">
+                <i class="bi bi-exclamation-triangle"></i> {{ evento.prioridad }}
+              </span>
+              
+              <span class="badge bg-secondary" *ngIf="evento.hora">
+                <i class="bi bi-clock"></i> {{ evento.hora }}
+              </span>
+              
+              <span class="badge bg-info text-dark" *ngIf="evento.nombre_responsable">
+                <i class="bi bi-person"></i> {{ evento.nombre_responsable }}
+              </span>
+              
+              <span class="badge bg-dark" *ngIf="evento.id_equipo">
+                <i class="bi bi-wrench"></i> {{ getNombreEquipo(evento.id_equipo) }}
+              </span>
+
+              <span class="badge bg-secondary" *ngIf="evento.id_area">
+                <i class="bi bi-geo-alt"></i> {{ getNombreArea(evento.id_area) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sin eventos -->
+        <div class="text-center py-5" *ngIf="eventosDelDia.length === 0">
+          <i class="bi bi-calendar-x" style="font-size: 4rem; color: #dee2e6;"></i>
+          <p class="text-muted mt-3 mb-0">No hay eventos programados para este día</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarEventosDelDia()">
+          <i class="bi bi-x-circle"></i> Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Alerta -->
+<app-modal-alerta 
+  [mostrar]="mostrarAlerta"
+  [mensaje]="mensajeAlerta"
+  [tipo]="tipoAlerta"
+  (cerrar)="cerrarAlerta()">
+</app-modal-alerta>

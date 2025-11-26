@@ -1,0 +1,228 @@
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h2 class="mb-1">
+            <i class="bi bi-calendar-week"></i> Horarios Semanales
+          </h2>
+          <p class="text-muted">
+            <span *ngIf="isAdmin">Gestión de horarios del personal de mantenimiento</span>
+            <span *ngIf="isMantenimiento">Mi horario semanal</span>
+          </p>
+        </div>
+        <button class="btn btn-primary" (click)="abrirModal()" *ngIf="isAdmin">
+          <i class="bi bi-plus-circle"></i> Nuevo Horario
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista ADMIN: Todos los horarios -->
+  <div *ngIf="isAdmin">
+    <div class="card border-0 shadow-sm mb-3" *ngFor="let horario of horarios">
+      <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="bi bi-person-circle"></i> {{ horario.nombre_usuario }}
+          </h5>
+          <div>
+            <button class="btn btn-sm btn-light me-2" (click)="abrirModal(horario)">
+              <i class="bi bi-pencil"></i> Editar
+            </button>
+            <button class="btn btn-sm btn-danger" (click)="eliminarHorario(horario)">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-bordered mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Lunes</th>
+                <th>Martes</th>
+                <th>Miércoles</th>
+                <th>Jueves</th>
+                <th>Viernes</th>
+                <th>Sábado</th>
+                <th>Domingo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td *ngFor="let dia of diasSemana" [ngClass]="getTurno(horario, dia).trabaja ? 'bg-success-subtle' : 'bg-danger-subtle'">
+                  <div *ngIf="getTurno(horario, dia).trabaja">
+                    <i class="bi bi-check-circle text-success"></i> Trabaja<br>
+                    <small>{{ getTurno(horario, dia).hora_entrada }} - {{ getTurno(horario, dia).hora_salida }}</small>
+                  </div>
+                  <div *ngIf="!getTurno(horario, dia).trabaja">
+                    <i class="bi bi-x-circle text-danger"></i> Descanso
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="horarios.length === 0" class="alert alert-info">
+      <i class="bi bi-info-circle"></i> No hay horarios registrados. Crea uno para comenzar.
+    </div>
+  </div>
+
+  <!-- Vista MANTENIMIENTO: Solo su horario -->
+  <div *ngIf="isMantenimiento && miHorario">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-info text-white">
+        <h5 class="mb-0">
+          <i class="bi bi-calendar-week"></i> Mi Horario Semanal
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-bordered mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Lunes</th>
+                <th>Martes</th>
+                <th>Miércoles</th>
+                <th>Jueves</th>
+                <th>Viernes</th>
+                <th>Sábado</th>
+                <th>Domingo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td *ngFor="let dia of diasSemana" [ngClass]="getTurno(miHorario, dia).trabaja ? 'bg-success-subtle' : 'bg-danger-subtle'">
+                  <div *ngIf="getTurno(miHorario, dia).trabaja">
+                    <i class="bi bi-check-circle text-success"></i> Trabaja<br>
+                    <small><strong>{{ getTurno(miHorario, dia).hora_entrada }} - {{ getTurno(miHorario, dia).hora_salida }}</strong></small>
+                  </div>
+                  <div *ngIf="!getTurno(miHorario, dia).trabaja">
+                    <i class="bi bi-x-circle text-danger"></i> Descanso
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="isMantenimiento && !miHorario" class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> Aún no tienes un horario asignado. Contacta al administrador.
+  </div>
+</div>
+
+<!-- Modal Crear/Editar Horario -->
+<div class="modal fade show" [class.d-block]="mostrarModal" 
+     [style.background]="mostrarModal ? 'rgba(0,0,0,0.5)' : 'none'" 
+     *ngIf="mostrarModal">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-calendar-week"></i> {{ horarioEditando ? 'Editar' : 'Nuevo' }} Horario
+        </h5>
+        <button type="button" class="btn-close" (click)="cerrarModal()"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">
+                <i class="bi bi-person"></i> Usuario <span class="text-danger">*</span>
+              </label>
+              <select 
+                class="form-select" 
+                [(ngModel)]="nuevoHorario.id_usuario" 
+                name="usuario"
+                (change)="onUsuarioChange()"
+                [disabled]="horarioEditando !== null">
+                <option value="">Seleccionar usuario</option>
+                <option *ngFor="let usuario of usuariosMantenimiento" [value]="usuario.id">
+                  {{ usuario.nombre }}
+                </option>
+              </select>
+            </div>
+
+            <div class="col-md-3 mb-3">
+              <label class="form-label">Semana Inicio</label>
+              <input type="date" class="form-control" [(ngModel)]="nuevoHorario.semana_inicio" name="inicio">
+            </div>
+
+            <div class="col-md-3 mb-3">
+              <label class="form-label">Semana Fin</label>
+              <input type="date" class="form-control" [(ngModel)]="nuevoHorario.semana_fin" name="fin">
+            </div>
+          </div>
+
+          <h6 class="mb-3">Horario por Día</h6>
+          
+          <div class="row">
+            <div class="col-12 mb-3" *ngFor="let dia of diasSemana">
+              <div class="card">
+                <div class="card-body">
+                  <div class="row align-items-center">
+                    <div class="col-md-2">
+                      <strong class="text-capitalize">{{ dia }}</strong>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="form-check">
+                        <input 
+                          class="form-check-input" 
+                          type="checkbox" 
+                          [(ngModel)]="getTurno(nuevoHorario, dia).trabaja"
+                          [name]="dia + '_trabaja'">
+                        <label class="form-check-label">
+                          Trabaja
+                        </label>
+                      </div>
+                    </div>
+                    <div class="col-md-3" *ngIf="getTurno(nuevoHorario, dia).trabaja">
+                      <label class="form-label mb-1">Entrada</label>
+                      <input 
+                        type="time" 
+                        class="form-control form-control-sm" 
+                        [(ngModel)]="getTurno(nuevoHorario, dia).hora_entrada"
+                        [name]="dia + '_entrada'">
+                    </div>
+                    <div class="col-md-3" *ngIf="getTurno(nuevoHorario, dia).trabaja">
+                      <label class="form-label mb-1">Salida</label>
+                      <input 
+                        type="time" 
+                        class="form-control form-control-sm" 
+                        [(ngModel)]="getTurno(nuevoHorario, dia).hora_salida"
+                        [name]="dia + '_salida'">
+                    </div>
+                    <div class="col-md-2" *ngIf="getTurno(nuevoHorario, dia).trabaja">
+                      <input 
+                        type="text" 
+                        class="form-control form-control-sm" 
+                        [(ngModel)]="getTurno(nuevoHorario, dia).notas"
+                        [name]="dia + '_notas'"
+                        placeholder="Notas">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModal()">
+          <i class="bi bi-x-circle"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" (click)="guardarHorario()">
+          <i class="bi bi-save"></i> Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

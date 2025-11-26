@@ -1,59 +1,138 @@
-# HotelMantenimientoFirebase
+# 🏨 Sistema de Mantenimiento - Hotel HB
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.3.
+Sistema completo de gestión de mantenimiento hotelero desarrollado con Angular y Firebase.
 
-## Development server
+## 🚀 Características
 
-To start a local development server, run:
+- ✅ **Gestión de Mantenimientos**: Programación, asignación y seguimiento completo
+- 🔧 **Gestión de Equipos**: Inventario por áreas y tipos
+- 📋 **Reportes de Incidentes**: Sistema para amas de llaves con asignación automática equitativa
+- 📅 **Calendario Responsivo**: Vista de mantenimientos programados (mobile-friendly)
+- 🕐 **Gestión de Horarios**: Control de personal de mantenimiento
+- 📊 **Reportes en PDF**: Generación automática de órdenes de trabajo y reportes
+- 🔄 **Sincronización**: Calendario sincronizado automáticamente con mantenimientos
 
+## 🛠️ Tecnologías
+
+- **Frontend**: Angular 19 (Standalone Components)
+- **Backend**: Firebase/Firestore
+- **Autenticación**: Firebase Authentication
+- **UI**: Bootstrap 5 + Bootstrap Icons
+- **PDF**: jsPDF + jsPDF-AutoTable
+
+## 📦 Instalación
 ```bash
+# Clonar repositorio
+git clone https://github.com/R4GUI/hotel-hb-mantenimiento.git
+
+# Instalar dependencias
+cd hotel-hb-mantenimiento
+npm install
+
+# Configurar Firebase
+# Editar src/app/services/firebase.service.ts con tus credenciales
+
+# Ejecutar en desarrollo
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## 👥 Roles de Usuario
 
-## Code scaffolding
+- **Admin**: Acceso completo al sistema
+- **Mantenimiento**: Gestión de mantenimientos e incidentes asignados
+- **Ama de Llaves**: Reporte y seguimiento de incidentes
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+## 🔐 Credenciales de Prueba
+```
+Usuario: admin
+Contraseña: hbhotel
+Rol: Administrador
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## 📋 Funcionalidades Principales
 
-```bash
-ng generate --help
+### Admin
+- Configuración de áreas, tipos de equipos y equipos
+- Gestión completa de mantenimientos
+- Asignación manual de personal
+- Calendario de mantenimientos
+- Reportes y estadísticas
+- Gestión de horarios de personal
+
+### Mantenimiento
+- Ver mantenimientos asignados
+- Iniciar y completar trabajos
+- Registrar refacciones utilizadas
+- Generar reportes PDF
+- Gestionar incidentes asignados
+
+### Ama de Llaves
+- Reportar incidentes
+- Seguimiento de incidentes reportados
+- Agregar observaciones sobre trabajos completados
+- Historial de reportes
+
+## 🎨 Características Técnicas
+
+- Componentes standalone de Angular 19
+- Diseño responsivo (Desktop, Tablet, Mobile)
+- Sincronización automática con Firebase
+- Asignación equitativa de incidentes
+- Sistema de filtros inteligentes bidireccionales
+- Generación automática de nombres de equipos
+- Modo editor secreto para acciones administrativas
+
+## 📱 Responsive Design
+
+El sistema está optimizado para:
+- 📱 Móviles (320px - 767px)
+- 📱 Tablets (768px - 991px)
+- 💻 Desktop (992px+)
+
+## 📝 Estructura del Proyecto
+```
+src/
+├── app/
+│   ├── components/
+│   │   ├── login/
+│   │   ├── dashboard/
+│   │   ├── configuracion/
+│   │   ├── mantenimiento/
+│   │   ├── incidentes/
+│   │   ├── calendario/
+│   │   ├── horarios/
+│   │   └── shared/
+│   ├── services/
+│   │   ├── firebase.service.ts
+│   │   ├── api.service.ts
+│   │   └── auth.service.ts
+│   ├── models/
+│   │   └── interfaces.ts
+│   └── guards/
+│       └── auth.guard.ts
+└── assets/
 ```
 
-## Building
+## 🔒 Seguridad
 
-To build the project run:
+- Autenticación con Firebase
+- Guards de ruta por rol
+- Validación de permisos en cada acción
+- Protección contra acceso no autorizado
 
-```bash
-ng build
-```
+## 📄 Licencia
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Proyecto privado - Hotel HB
 
-## Running unit tests
+## 👨‍💻 Desarrollador
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+Desarrollado por RAGUI para Hotel HB, Córdoba, Veracruz
 
-```bash
-ng test
-```
+## 🆕 Últimas Actualizaciones
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- ✅ Sistema de asignación equitativa de incidentes
+- ✅ Calendario responsivo con indicadores visuales
+- ✅ Filtros inteligentes bidireccionales
+- ✅ Sincronización automática calendario-mantenimiento
+- ✅ Generación automática de nombres de equipos
+- ✅ Formulario simplificado para amas de llaves

@@ -1,0 +1,354 @@
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12">
+      <h2 class="mb-1">
+        <i class="bi bi-gear"></i> Configuración
+      </h2>
+      <p class="text-muted">Administrar áreas, tipos y equipos</p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+      <button 
+        class="nav-link" 
+        [class.active]="tabActiva === 'areas'" 
+        (click)="cambiarTab('areas')"
+        type="button">
+        <i class="bi bi-geo-alt"></i> Áreas
+      </button>
+    </li>
+    <li class="nav-item">
+      <button 
+        class="nav-link" 
+        [class.active]="tabActiva === 'tipos'" 
+        (click)="cambiarTab('tipos')"
+        type="button">
+        <i class="bi bi-tag"></i> Tipos de Equipos
+      </button>
+    </li>
+    <li class="nav-item">
+      <button 
+        class="nav-link" 
+        [class.active]="tabActiva === 'equipos'" 
+        (click)="cambiarTab('equipos')"
+        type="button">
+        <i class="bi bi-wrench"></i> Equipos
+      </button>
+    </li>
+  </ul>
+
+  <!-- TAB: ÁREAS -->
+  <div *ngIf="tabActiva === 'areas'">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4>Áreas del Hotel</h4>
+      <button class="btn btn-primary" (click)="abrirModalArea()">
+        <i class="bi bi-plus-circle"></i> Nueva Área
+      </button>
+    </div>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Equipos</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let area of areas">
+                <td><strong>{{ area.nombre }}</strong></td>
+                <td>{{ area.descripcion || '-' }}</td>
+                <td>
+                  <span class="badge bg-info">{{ contarEquiposPorArea(area.id_area) }} equipos</span>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-outline-primary me-2" (click)="abrirModalArea(area)">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" (click)="eliminarArea(area)">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="areas.length === 0">
+                <td colspan="4" class="text-center text-muted py-4">
+                  No hay áreas registradas
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: TIPOS -->
+  <div *ngIf="tabActiva === 'tipos'">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4>Tipos de Equipos</h4>
+      <button class="btn btn-primary" (click)="abrirModalTipo()">
+        <i class="bi bi-plus-circle"></i> Nuevo Tipo
+      </button>
+    </div>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Equipos</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tipo of tipos">
+                <td><strong>{{ tipo.nombre }}</strong></td>
+                <td>{{ tipo.descripcion || '-' }}</td>
+                <td>
+                  <span class="badge bg-primary">{{ contarEquiposPorTipo(tipo.id_tipo) }} equipos</span>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-outline-primary me-2" (click)="abrirModalTipo(tipo)">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" (click)="eliminarTipo(tipo)">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="tipos.length === 0">
+                <td colspan="4" class="text-center text-muted py-4">
+                  No hay tipos registrados
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: EQUIPOS CON FILTROS -->
+  <div *ngIf="tabActiva === 'equipos'">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="d-flex align-items-center gap-3">
+        <h4>Equipos</h4>
+        
+        <!-- 🆕 FILTROS -->
+        <div class="d-flex gap-2">
+          <!-- Filtro por Tipo -->
+          <div class="input-group" style="max-width: 250px;">
+            <span class="input-group-text">
+              <i class="bi bi-tag"></i>
+            </span>
+            <select class="form-select" [(ngModel)]="tipoFiltro" name="filtroTipo">
+              <option value="">Todos los tipos</option>
+              <option *ngFor="let tipo of tipos" [value]="tipo.id_tipo">
+                {{ tipo.nombre }} ({{ contarEquiposPorTipo(tipo.id_tipo) }})
+              </option>
+            </select>
+          </div>
+
+          <!-- Filtro por Área -->
+          <div class="input-group" style="max-width: 250px;">
+            <span class="input-group-text">
+              <i class="bi bi-geo-alt"></i>
+            </span>
+            <select class="form-select" [(ngModel)]="areaFiltro" name="filtroArea">
+              <option value="">Todas las áreas</option>
+              <option *ngFor="let area of areas" [value]="area.id_area">
+                {{ area.nombre }} ({{ contarEquiposPorArea(area.id_area) }})
+              </option>
+            </select>
+          </div>
+
+          <!-- Botón limpiar filtros -->
+          <button class="btn btn-outline-secondary" (click)="limpiarFiltros()" *ngIf="areaFiltro || tipoFiltro">
+            <i class="bi bi-x-circle"></i> Limpiar
+          </button>
+        </div>
+      </div>
+      
+      <button class="btn btn-primary" (click)="abrirModalEquipo()">
+        <i class="bi bi-plus-circle"></i> Nuevo Equipo
+      </button>
+    </div>
+
+    <!-- Badge con conteo -->
+    <div class="alert alert-info" *ngIf="areaFiltro || tipoFiltro">
+      <i class="bi bi-info-circle"></i> 
+      Mostrando <strong>{{ equiposFiltrados.length }}</strong> equipos
+      <span *ngIf="tipoFiltro"> del tipo <strong>{{ getNombreTipo(tipoFiltro) }}</strong></span>
+      <span *ngIf="areaFiltro"> en <strong>{{ getNombreArea(areaFiltro) }}</strong></span>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Nombre/ID</th>
+                <th>Tipo</th>
+                <th>Marca</th>
+                <th>Modelo</th>
+                <th>N° Serie</th>
+                <th>Área</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let equipo of equiposFiltrados">
+                <td><strong>{{ equipo.nombre }}</strong></td>
+                <td>
+                  <span class="badge bg-primary">{{ getNombreTipo(equipo.id_tipo) }}</span>
+                </td>
+                <td>{{ equipo.marca || '-' }}</td>
+                <td>{{ equipo.modelo || '-' }}</td>
+                <td>{{ equipo.numero_serie || '-' }}</td>
+                <td>
+                  <span class="badge bg-secondary">{{ getNombreArea(equipo.id_area) }}</span>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-outline-primary me-2" (click)="abrirModalEquipo(equipo)">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" (click)="eliminarEquipo(equipo)">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="equiposFiltrados.length === 0">
+                <td colspan="7" class="text-center text-muted py-4">
+                  <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                  <p class="mb-0 mt-2">No hay equipos {{ areaFiltro || tipoFiltro ? 'con estos filtros' : 'registrados' }}</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Universal para Crear/Editar -->
+<div class="modal fade show" [class.d-block]="mostrarModal" 
+     [style.background]="mostrarModal ? 'rgba(0,0,0,0.5)' : 'none'" 
+     *ngIf="mostrarModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <span *ngIf="tipoModal === 'area'">
+            <i class="bi bi-geo-alt"></i> {{ areaEditando ? 'Editar' : 'Nueva' }} Área
+          </span>
+          <span *ngIf="tipoModal === 'tipo'">
+            <i class="bi bi-tag"></i> {{ tipoEditando ? 'Editar' : 'Nuevo' }} Tipo
+          </span>
+          <span *ngIf="tipoModal === 'equipo'">
+            <i class="bi bi-wrench"></i> {{ equipoEditando ? 'Editar' : 'Nuevo' }} Equipo
+          </span>
+        </h5>
+        <button type="button" class="btn-close" (click)="cerrarModal()"></button>
+      </div>
+      <div class="modal-body">
+        <!-- FORMULARIO ÁREA -->
+        <form *ngIf="tipoModal === 'area'">
+          <div class="mb-3">
+            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" [(ngModel)]="nuevaArea.nombre" name="nombre">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <textarea class="form-control" [(ngModel)]="nuevaArea.descripcion" name="descripcion" rows="3"></textarea>
+          </div>
+        </form>
+
+        <!-- FORMULARIO TIPO -->
+        <form *ngIf="tipoModal === 'tipo'">
+          <div class="mb-3">
+            <label class="form-label">Nombre del Tipo <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" [(ngModel)]="nuevoTipo.nombre" name="nombre" placeholder="Ej: Aire Acondicionado">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <textarea class="form-control" [(ngModel)]="nuevoTipo.descripcion" name="descripcion" rows="3" placeholder="Describe el tipo de equipo..."></textarea>
+          </div>
+        </form>
+
+        <!-- FORMULARIO EQUIPO (SIN NOMBRE MANUAL) -->
+        <form *ngIf="tipoModal === 'equipo'">
+          <div class="alert alert-info mb-3">
+            <i class="bi bi-info-circle"></i> <strong>Nota:</strong> El nombre del equipo se generará automáticamente.
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">
+              <i class="bi bi-tag"></i> Tipo de Equipo <span class="text-danger">*</span>
+            </label>
+            <select class="form-select" [(ngModel)]="nuevoEquipo.id_tipo" name="tipo">
+              <option value="">Seleccionar tipo</option>
+              <option *ngFor="let tipo of tipos" [value]="tipo.id_tipo">{{ tipo.nombre }}</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">
+              <i class="bi bi-geo-alt"></i> Área <span class="text-danger">*</span>
+            </label>
+            <select class="form-select" [(ngModel)]="nuevoEquipo.id_area" name="area">
+              <option value="">Seleccionar área</option>
+              <option *ngFor="let area of areas" [value]="area.id_area">{{ area.nombre }}</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Marca</label>
+            <input type="text" class="form-control" [(ngModel)]="nuevoEquipo.marca" name="marca" placeholder="Ej: LG, Samsung, Carrier">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Modelo</label>
+            <input type="text" class="form-control" [(ngModel)]="nuevoEquipo.modelo" name="modelo" placeholder="Ej: X-500">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Número de Serie</label>
+            <input type="text" class="form-control" [(ngModel)]="nuevoEquipo.numero_serie" name="serie" placeholder="Ej: ABC123456">
+          </div>
+
+          <!-- Preview del nombre -->
+          <div class="alert alert-success" *ngIf="nuevoEquipo.id_tipo && nuevoEquipo.id_area">
+            <strong>Nombre que se generará:</strong><br>
+            {{ getNombreTipo(nuevoEquipo.id_tipo) }} - {{ getNombreArea(nuevoEquipo.id_area) }} - #{{ contarEquiposPorTipo(nuevoEquipo.id_tipo) + 1 }}
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModal()">
+          <i class="bi bi-x-circle"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" 
+                (click)="tipoModal === 'area' ? guardarArea() : tipoModal === 'tipo' ? guardarTipo() : guardarEquipo()">
+          <i class="bi bi-save"></i> Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmación -->
+<app-modal-alerta 
+  [mostrar]="mostrarModalConfirmacion"
+  [mensaje]="mensajeConfirmacion"
+  [tipo]="tipoConfirmacion"
+  (cerrar)="cerrarModalConfirmacion()">
+</app-modal-alerta>

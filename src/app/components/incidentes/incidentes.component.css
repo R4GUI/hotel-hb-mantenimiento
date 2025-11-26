@@ -1,0 +1,39 @@
+.table th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.badge {
+  font-weight: 500;
+  padding: 0.35rem 0.65rem;
+}
+
+.form-check {
+  padding: 0.5rem 0;
+}
+
+.form-check-label {
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
+.btn-group-vertical {
+  gap: 0.25rem;
+}
+
+.text-wrap {
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+.modal-content {
+  border-radius: 15px;
+  border: none;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}

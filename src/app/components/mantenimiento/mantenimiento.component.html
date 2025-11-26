@@ -1,0 +1,627 @@
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h2 class="mb-1">
+            <i class="bi bi-tools"></i> Gestión de Mantenimiento
+            
+            <!-- 🔒 BOTÓN SECRETO DE EDITOR -->
+            <button 
+              class="btn btn-sm ms-2" 
+              [ngClass]="modoEditor ? 'btn-danger' : 'btn-outline-secondary'"
+              (click)="activarModoEditor()"
+              title="Modo Editor"
+              style="font-size: 0.7rem;">
+              <i class="bi" [ngClass]="modoEditor ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
+            </button>
+          </h2>
+          <p class="text-muted">
+            Administrar solicitudes de mantenimiento
+            <span class="badge bg-danger ms-2" *ngIf="modoEditor">
+              <i class="bi bi-exclamation-triangle"></i> MODO EDITOR ACTIVO
+            </span>
+          </p>
+        </div>
+        <div>
+          <!-- Botón Historial (Solo Mantenimiento) -->
+          <button class="btn btn-outline-primary me-2" (click)="abrirModalHistorial()" *ngIf="isMantenimiento">
+            <i class="bi bi-calendar-event"></i> Historial por Día
+          </button>
+          
+          <!-- Botón Nuevo (Solo Admin) -->
+          <button class="btn btn-primary" (click)="abrirModal()" *ngIf="isAdmin">
+            <i class="bi bi-plus-circle"></i> Nuevo Mantenimiento
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de Mantenimientos -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Folio</th>
+              <th>Equipo</th>
+              <th>Área</th>
+              <th>Tipo</th>
+              <th>Descripción</th>
+              <th>Prioridad</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let mant of mantenimientos">
+              <td>
+                <small class="text-muted">#{{ mant.id_mantenimiento?.substring(0, 8) }}</small>
+              </td>
+              <td>
+                <strong>{{ getNombreEquipo(mant.id_equipo) }}</strong>
+              </td>
+              <td>
+                <span class="badge bg-secondary">{{ getNombreArea(mant.id_area) }}</span>
+              </td>
+              <td>
+                <span class="badge bg-dark">{{ getNombreTipo(mant.id_tipo) }}</span>
+              </td>
+              <td>
+                <small>{{ mant.descripcion || '-' }}</small>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="getPrioridadBadgeClass(mant.prioridad)">
+                  {{ mant.prioridad }}
+                </span>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="getBadgeClass(mant.estado)">
+                  {{ mant.estado === 'orden_generada' ? 'Orden Lista' : mant.estado }}
+                </span>
+              </td>
+              <td>
+                <div class="btn-group-vertical btn-group-sm" style="min-width: 140px;">
+                  
+                  <!-- ============ ADMIN: VE TODO ============ -->
+                  <ng-container *ngIf="isAdmin">
+                    <!-- Editar (Programado) -->
+                    <button 
+                      class="btn btn-primary mb-1" 
+                      (click)="abrirModal(mant)" 
+                      *ngIf="mant.estado === 'programado'">
+                      <i class="bi bi-pencil"></i> Editar
+                    </button>
+
+                    <!-- Eliminar (Programado) -->
+                    <button 
+                      class="btn btn-danger mb-1" 
+                      (click)="eliminarMantenimiento(mant.id_mantenimiento!)" 
+                      *ngIf="mant.estado === 'programado'">
+                      <i class="bi bi-trash"></i> Eliminar
+                    </button>
+
+                    <!-- Orden de Trabajo (Programado) -->
+                    <button 
+                      class="btn btn-info mb-1" 
+                      (click)="generarOrdenTrabajo(mant)" 
+                      *ngIf="mant.estado === 'programado'">
+                      <i class="bi bi-file-earmark-text"></i> Orden Trabajo
+                    </button>
+
+                    <!-- Iniciar (Orden Generada) -->
+                    <button 
+                      class="btn btn-success mb-1" 
+                      (click)="iniciarMantenimiento(mant)" 
+                      *ngIf="mant.estado === 'orden_generada'">
+                      <i class="bi bi-play-fill"></i> Iniciar
+                    </button>
+
+                    <!-- Refacciones (Activo) -->
+                    <button 
+                      class="btn btn-warning mb-1" 
+                      (click)="abrirModalRefacciones(mant)" 
+                      *ngIf="mant.estado === 'activo'">
+                      <i class="bi bi-wrench"></i> Refacciones
+                    </button>
+
+                    <!-- Finalizar (Activo) -->
+                    <button 
+                      class="btn btn-info mb-1" 
+                      (click)="abrirModalReporte(mant)" 
+                      *ngIf="mant.estado === 'activo'">
+                      <i class="bi bi-check-circle"></i> Finalizar
+                    </button>
+
+                    <!-- PDF (Completado) -->
+                    <button 
+                      class="btn btn-outline-secondary mb-1" 
+                      (click)="generarPDFCompleto(mant)"
+                      *ngIf="mant.estado === 'completado'">
+                      <i class="bi bi-file-pdf"></i> PDF
+                    </button>
+
+                    <!-- Reabrir (Completado + Modo Editor) -->
+                    <button 
+                      class="btn btn-outline-warning mb-1" 
+                      (click)="iniciarMantenimiento(mant)"
+                      *ngIf="mant.estado === 'completado' && modoEditor">
+                      <i class="bi bi-arrow-counterclockwise"></i> Reabrir
+                    </button>
+
+                    <!-- Eliminar Completado (Modo Editor) -->
+                    <button 
+                      class="btn btn-outline-danger" 
+                      (click)="eliminarMantenimiento(mant.id_mantenimiento!)"
+                      *ngIf="mant.estado === 'completado' && modoEditor">
+                      <i class="bi bi-trash"></i> Eliminar
+                    </button>
+                  </ng-container>
+
+                  <!-- ============ MANTENIMIENTO: FLUJO ORDENADO ============ -->
+                  <ng-container *ngIf="isMantenimiento && !isAdmin">
+                    <!-- Orden de Trabajo (Programado) -->
+                    <button 
+                      class="btn btn-info mb-1" 
+                      (click)="generarOrdenTrabajo(mant)" 
+                      *ngIf="mant.estado === 'programado'">
+                      <i class="bi bi-file-earmark-text"></i> Orden Trabajo
+                    </button>
+
+                    <!-- Iniciar (Orden Generada) -->
+                    <button 
+                      class="btn btn-success mb-1" 
+                      (click)="iniciarMantenimiento(mant)" 
+                      *ngIf="mant.estado === 'orden_generada'">
+                      <i class="bi bi-play-fill"></i> Iniciar
+                    </button>
+
+                    <!-- Refacciones (Activo) -->
+                    <button 
+                      class="btn btn-warning mb-1" 
+                      (click)="abrirModalRefacciones(mant)" 
+                      *ngIf="mant.estado === 'activo'">
+                      <i class="bi bi-wrench"></i> Refacciones
+                    </button>
+
+                    <!-- Finalizar (Activo) -->
+                    <button 
+                      class="btn btn-info mb-1" 
+                      (click)="abrirModalReporte(mant)" 
+                      *ngIf="mant.estado === 'activo'">
+                      <i class="bi bi-check-circle"></i> Finalizar
+                    </button>
+
+                    <!-- PDF (Completado) -->
+                    <button 
+                      class="btn btn-outline-secondary" 
+                      (click)="generarPDFCompleto(mant)"
+                      *ngIf="mant.estado === 'completado'">
+                      <i class="bi bi-file-pdf"></i> PDF
+                    </button>
+
+                    <!-- Badge Completado -->
+                    <span class="badge bg-success" *ngIf="mant.estado === 'completado'">
+                      <i class="bi bi-check-circle-fill"></i> Completado
+                    </span>
+                  </ng-container>
+
+                  <!-- Indicador Modo Editor (Admin) -->
+                  <span class="badge bg-danger mt-1" *ngIf="modoEditor && isAdmin">
+                    <i class="bi bi-unlock-fill"></i> EDITOR
+                  </span>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="mantenimientos.length === 0">
+              <td colspan="8" class="text-center text-muted py-4">
+                <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                <p class="mb-0 mt-2">No hay mantenimientos registrados</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Crear/Editar Mantenimiento -->
+<div class="modal fade show" [class.d-block]="mostrarModal" 
+     [style.background]="mostrarModal ? 'rgba(0,0,0,0.5)' : 'none'" 
+     *ngIf="mostrarModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-tools"></i> {{ modoEdicion ? 'Editar' : 'Nuevo' }} Mantenimiento
+        </h5>
+        <button type="button" class="btn-close" (click)="cerrarModal()"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="row">
+            <!-- Área -->
+            <div class="col-md-6 mb-3">
+              <label class="form-label">
+                Área <span class="text-danger">*</span>
+                <i class="bi bi-info-circle text-muted" title="Al seleccionar área, se filtrarán los equipos"></i>
+              </label>
+              <select class="form-select" [(ngModel)]="nuevoMantenimiento.id_area" name="area" (change)="onAreaChange()">
+                <option value="">Seleccionar área</option>
+                <option *ngFor="let area of areas" [value]="area.id_area">
+                  {{ area.nombre }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Tipo -->
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Tipo <span class="text-danger">*</span></label>
+              <select class="form-select" [(ngModel)]="nuevoMantenimiento.id_tipo" name="tipo">
+                <option value="">Seleccionar tipo</option>
+                <option *ngFor="let tipo of tipos" [value]="tipo.id_tipo">
+                  {{ tipo.nombre }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Equipo (FILTRADO) -->
+            <div class="col-md-6 mb-3">
+              <label class="form-label">
+                Equipo <span class="text-danger">*</span>
+                <span class="badge bg-info ms-2" *ngIf="nuevoMantenimiento.id_area">
+                  {{ equiposFiltrados.length }} disponibles
+                </span>
+              </label>
+              <select class="form-select" [(ngModel)]="nuevoMantenimiento.id_equipo" name="equipo" (change)="onEquipoChange()">
+                <option value="">Seleccionar equipo</option>
+                <option *ngFor="let equipo of equiposFiltrados" [value]="equipo.id_equipo">
+                  {{ equipo.nombre }} {{ equipo.marca ? '- ' + equipo.marca : '' }}
+                </option>
+              </select>
+              <small class="text-muted" *ngIf="!nuevoMantenimiento.id_area">
+                <i class="bi bi-lightbulb"></i> Tip: Selecciona un área para filtrar equipos
+              </small>
+            </div>
+
+            <!-- Prioridad -->
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Prioridad</label>
+              <select class="form-select" [(ngModel)]="nuevoMantenimiento.prioridad" name="prioridad">
+                <option value="baja">Baja</option>
+                <option value="media">Media</option>
+                <option value="alta">Alta</option>
+                <option value="urgente">Urgente</option>
+              </select>
+            </div>
+
+            <!-- 🆕 FECHA PROGRAMADA -->
+            <div class="col-md-6 mb-3">
+              <label class="form-label">
+                <i class="bi bi-calendar3"></i> Fecha Programada (Opcional)
+              </label>
+              <input 
+                type="date" 
+                class="form-control" 
+                [ngModel]="nuevoMantenimiento.fecha_programada | date:'yyyy-MM-dd'" 
+                (ngModelChange)="nuevoMantenimiento.fecha_programada = $event"
+                name="fecha_programada">
+              <small class="text-muted">
+                <i class="bi bi-info-circle"></i> Se agregará automáticamente al calendario
+              </small>
+            </div>
+
+            <!-- Descripción -->
+            <div class="col-12 mb-3">
+              <label class="form-label">Descripción</label>
+              <textarea 
+                class="form-control" 
+                [(ngModel)]="nuevoMantenimiento.descripcion" 
+                name="descripcion" 
+                rows="3"
+                placeholder="Describe el trabajo a realizar..."></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModal()">
+          <i class="bi bi-x-circle"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" (click)="guardarMantenimiento()">
+          <i class="bi bi-save"></i> Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Refacciones -->
+<div class="modal fade show" [class.d-block]="mostrarModalRefacciones" 
+     [style.background]="mostrarModalRefacciones ? 'rgba(0,0,0,0.5)' : 'none'" 
+     *ngIf="mostrarModalRefacciones">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-wrench"></i> Refacciones
+        </h5>
+        <button type="button" class="btn-close" (click)="cerrarModalRefacciones()"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Formulario agregar refacción -->
+        <div class="card mb-3">
+          <div class="card-header bg-light">
+            <h6 class="mb-0">Agregar Refacción</h6>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Refacción</label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  [(ngModel)]="nuevaRefaccion.nombre" 
+                  name="nombre"
+                  placeholder="Nombre">
+              </div>
+
+              <div class="col-md-2 mb-3">
+                <label class="form-label">Cantidad</label>
+                <input 
+                  type="number" 
+                  class="form-control" 
+                  [(ngModel)]="nuevaRefaccion.cantidad" 
+                  name="cantidad"
+                  min="1">
+              </div>
+
+              <div class="col-md-3 mb-3">
+                <label class="form-label">Precio Unit.</label>
+                <input 
+                  type="number" 
+                  class="form-control" 
+                  [(ngModel)]="nuevaRefaccion.precio_unitario" 
+                  name="precio"
+                  min="0"
+                  step="0.01">
+              </div>
+
+              <div class="col-md-3 mb-3">
+                <label class="form-label">Proveedor</label>
+                <select 
+                  class="form-select" 
+                  [(ngModel)]="proveedorSeleccionado" 
+                  name="proveedor"
+                  (change)="onProveedorChange()">
+                  <option value="">Seleccionar</option>
+                  <option *ngFor="let prov of proveedores" [value]="prov">{{ prov }}</option>
+                  <option value="nuevo">+ Nuevo proveedor</option>
+                </select>
+              </div>
+
+              <div class="col-12 mb-3" *ngIf="mostrarInputProveedor">
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  [(ngModel)]="nuevaRefaccion.proveedor" 
+                  name="nuevo_proveedor"
+                  placeholder="Nombre del nuevo proveedor">
+              </div>
+
+              <div class="col-12">
+                <button class="btn btn-success" (click)="agregarRefaccion()">
+                  <i class="bi bi-plus-circle"></i> Agregar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista de refacciones -->
+        <div class="card">
+          <div class="card-header bg-light">
+            <h6 class="mb-0">Refacciones Agregadas</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-sm mb-0">
+                <thead>
+                  <tr>
+                    <th>Refacción</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unit.</th>
+                    <th>Total</th>
+                    <th>Proveedor</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let ref of refacciones">
+                    <td>{{ ref.nombre }}</td>
+                    <td>{{ ref.cantidad }}</td>
+                    <td>${{ ref.precio_unitario?.toFixed(2) || '0.00' }}</td>
+                    <td>${{ (ref.cantidad * (ref.precio_unitario || 0)).toFixed(2) }}</td>
+                    <td>{{ ref.proveedor || '-' }}</td>
+                    <td>
+                      <button 
+                        class="btn btn-sm btn-danger" 
+                        (click)="eliminarRefaccion(ref)">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="refacciones.length === 0">
+                    <td colspan="6" class="text-center text-muted py-3">
+                      No hay refacciones agregadas
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot *ngIf="refacciones.length > 0">
+                  <tr>
+                    <td colspan="3" class="text-end"><strong>TOTAL:</strong></td>
+                    <td><strong>${{ getTotalRefacciones().toFixed(2) }}</strong></td>
+                    <td colspan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModalRefacciones()">
+          <i class="bi bi-x-circle"></i> Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Finalizar (Reporte) -->
+<div class="modal fade show" [class.d-block]="mostrarModalReporte" 
+     [style.background]="mostrarModalReporte ? 'rgba(0,0,0,0.5)' : 'none'" 
+     *ngIf="mostrarModalReporte">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-check-circle"></i> Finalizar Mantenimiento
+        </h5>
+        <button type="button" class="btn-close" (click)="cerrarModalReporte()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info mb-3">
+          <strong>Equipo:</strong> {{ getNombreEquipo(mantenimientoParaReporte?.id_equipo) }}<br>
+          <strong>Área:</strong> {{ getNombreArea(mantenimientoParaReporte?.id_area) }}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">
+            <i class="bi bi-file-text"></i> Trabajo Realizado <span class="text-danger">*</span>
+          </label>
+          <textarea 
+            class="form-control" 
+            [(ngModel)]="trabajoRealizado" 
+            name="trabajo" 
+            rows="5"
+            placeholder="Describe detalladamente el trabajo que realizaste..."></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">
+            <i class="bi bi-chat-left-text"></i> Observaciones Adicionales (Opcional)
+          </label>
+          <textarea 
+            class="form-control" 
+            [(ngModel)]="observacionesFinal" 
+            name="observaciones" 
+            rows="3"
+            placeholder="Cualquier observación adicional..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModalReporte()">
+          <i class="bi bi-x-circle"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-success" (click)="finalizarMantenimiento()">
+          <i class="bi bi-check-circle"></i> Finalizar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Historial por Día -->
+<div class="modal fade show" [class.d-block]="mostrarModalHistorial" 
+     [style.background]="mostrarModalHistorial ? 'rgba(0,0,0,0.5)' : 'none'" 
+     *ngIf="mostrarModalHistorial">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-calendar-event"></i> Historial por Día
+        </h5>
+        <button type="button" class="btn-close" (click)="cerrarModalHistorial()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label">Seleccionar Fecha</label>
+            <input 
+              type="date" 
+              class="form-control" 
+              [(ngModel)]="fechaHistorial"
+              (change)="cargarHistorial()"
+              name="fecha">
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+            <button class="btn btn-primary" (click)="generarReporteDiario()">
+              <i class="bi bi-file-pdf"></i> Generar Reporte PDF
+            </button>
+          </div>
+        </div>
+
+        <div class="alert alert-info" *ngIf="mantenimientosHistorial.length > 0">
+          <strong>Total de trabajos realizados:</strong> {{ mantenimientosHistorial.length }}
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>Equipo</th>
+                <th>Área</th>
+                <th>Estado</th>
+                <th>Trabajo Realizado</th>
+                <th>Hora</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let mant of mantenimientosHistorial; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ getNombreEquipo(mant.id_equipo) }}</td>
+                <td>
+                  <span class="badge bg-secondary">{{ getNombreArea(mant.id_area) }}</span>
+                </td>
+                <td>
+                  <span class="badge" [ngClass]="getBadgeClass(mant.estado)">
+                    {{ mant.estado }}
+                  </span>
+                </td>
+                <td>
+                  <small>{{ mant.trabajo_realizado || '-' }}</small>
+                </td>
+                <td>
+                  <small>{{ formatearFecha(mant.fecha_completado || mant.fecha_inicio) }}</small>
+                </td>
+              </tr>
+              <tr *ngIf="mantenimientosHistorial.length === 0">
+                <td colspan="6" class="text-center text-muted py-4">
+                  No hay mantenimientos para la fecha seleccionada
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModalHistorial()">
+          <i class="bi bi-x-circle"></i> Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Alerta -->
+<app-modal-alerta 
+  [mostrar]="mostrarAlerta"
+  [mensaje]="mensajeAlerta"
+  [tipo]="tipoAlerta"
+  (cerrar)="cerrarAlerta()">
+</app-modal-alerta>
