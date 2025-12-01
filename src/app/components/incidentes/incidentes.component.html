@@ -1,7 +1,7 @@
 <div class="container-fluid">
   <div class="row mb-4">
     <div class="col-12">
-      <div class="d-flex justify-content-between align-items-center">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
           <h2 class="mb-1">
             <i class="bi bi-exclamation-triangle"></i> Incidentes
@@ -17,38 +17,56 @@
               <i class="bi" [ngClass]="modoEditor ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
             </button>
           </h2>
-          <p class="text-muted">
+          <p class="text-muted mb-0">
             <span *ngIf="isAdmin">Todos los reportes de incidentes</span>
             <span *ngIf="isAmaDeLlaves">Reportar y gestionar incidentes</span>
+            <span *ngIf="isMantenimiento">Incidentes pendientes y tus trabajos en proceso</span>
+            <span *ngIf="isJefaAma">Vista completa de todos los incidentes</span>
             <span class="badge bg-danger ms-2" *ngIf="modoEditor">
               <i class="bi bi-exclamation-triangle"></i> MODO EDITOR ACTIVO
             </span>
           </p>
         </div>
-        <div class="d-flex gap-2">
-          <!-- 🆕 FILTRO POR TRABAJADOR (Solo Admin) -->
-          <div class="input-group" style="max-width: 300px;" *ngIf="isAdmin">
+        <div class="d-flex gap-2 flex-wrap">
+          <!-- 🆕 FILTRO POR TRABAJADOR (Admin y Jefa Ama) -->
+          <div class="input-group" style="max-width: 250px;" *ngIf="isAdmin || isJefaAma">
             <span class="input-group-text">
-              <i class="bi bi-person"></i>
+              <i class="bi bi-person-fill"></i>
             </span>
             <select class="form-select" [(ngModel)]="trabajadorSeleccionado" name="filtroTrabajador">
-              <option value="">Todos los trabajadores</option>
+              <option value="">Todos Mantenimiento</option>
               <option *ngFor="let trabajador of trabajadoresFiltro" [value]="trabajador.id">
                 {{ trabajador.nombre }}
               </option>
             </select>
-            <button class="btn btn-outline-secondary" (click)="limpiarFiltro()" *ngIf="trabajadorSeleccionado">
-              <i class="bi bi-x"></i>
-            </button>
           </div>
+
+          <!-- 🆕 FILTRO POR AMA DE LLAVES (Solo Jefa Ama) -->
+          <div class="input-group" style="max-width: 250px;" *ngIf="isJefaAma">
+            <span class="input-group-text">
+              <i class="bi bi-person-badge"></i>
+            </span>
+            <select class="form-select" [(ngModel)]="amaLlavesSeleccionada" name="filtroAmaLlaves">
+              <option value="">Todas Amas Llaves</option>
+              <option *ngFor="let ama of amasLlavesFiltro" [value]="ama.id">
+                {{ ama.nombre }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Botón limpiar filtros -->
+          <button class="btn btn-outline-secondary" (click)="limpiarFiltros()" 
+                  *ngIf="trabajadorSeleccionado || amaLlavesSeleccionada">
+            <i class="bi bi-x-circle"></i>
+          </button>
 
           <!-- Botón Historial -->
           <button class="btn btn-outline-primary" (click)="abrirModalHistorial()">
             <i class="bi bi-calendar-event"></i> Historial
           </button>
           
-          <!-- Botón Reportar (Solo Ama de Llaves) -->
-          <button class="btn btn-primary" (click)="abrirModal()" *ngIf="isAmaDeLlaves">
+          <!-- Botón Reportar (Ama de Llaves y Admin) -->
+          <button class="btn btn-primary" (click)="abrirModal()" *ngIf="isAmaDeLlaves || isAdmin">
             <i class="bi bi-plus-circle"></i> Reportar Incidente
           </button>
         </div>
@@ -56,11 +74,16 @@
     </div>
   </div>
 
-  <!-- 🆕 Badge de filtro activo -->
-  <div class="alert alert-info mb-3" *ngIf="trabajadorSeleccionado">
+  <!-- 🆕 Badge de filtros activos -->
+  <div class="alert alert-info mb-3" *ngIf="trabajadorSeleccionado || amaLlavesSeleccionada">
     <i class="bi bi-info-circle"></i> 
-Mostrando <strong>{{ incidentesFiltrados.length }}</strong> incidentes asignados a 
-<strong>{{ getNombreTrabajador(trabajadorSeleccionado) }}</strong>
+    Mostrando <strong>{{ incidentesFiltrados.length }}</strong> incidentes
+    <span *ngIf="trabajadorSeleccionado">
+      asignados a <strong>{{ getNombreTrabajador(trabajadorSeleccionado) }}</strong>
+    </span>
+    <span *ngIf="amaLlavesSeleccionada">
+      reportados por <strong>{{ getNombreAmaLlaves(amaLlavesSeleccionada) }}</strong>
+    </span>
   </div>
 
   <!-- Tabla de Incidentes -->
@@ -74,11 +97,11 @@ Mostrando <strong>{{ incidentesFiltrados.length }}</strong> incidentes asignados
               <th>Descripción</th>
               <th>Prioridad</th>
               <th>Estado</th>
-              <th>Asignado a</th>
+              <th>Tomado por</th>
               <th>Reportado por</th>
               <th>Fecha</th>
               <th>Observaciones</th>
-              <th *ngIf="isAdmin">Acciones Admin</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -100,7 +123,13 @@ Mostrando <strong>{{ incidentesFiltrados.length }}</strong> incidentes asignados
                 </span>
               </td>
               <td>
-                <small>{{ inc.nombre_mantenimiento_asignado || 'Sin asignar' }}</small>
+                <div *ngIf="inc.id_mantenimiento_asignado">
+                  <i class="bi bi-person-check-fill text-success"></i>
+                  <small>{{ inc.nombre_mantenimiento_asignado }}</small>
+                </div>
+                <span class="badge bg-warning text-dark" *ngIf="!inc.id_mantenimiento_asignado && inc.estado === 'pendiente'">
+                  <i class="bi bi-hourglass-split"></i> Sin tomar
+                </span>
               </td>
               <td>
                 <small>{{ inc.nombre_ama_llaves }}</small>
@@ -140,52 +169,71 @@ Mostrando <strong>{{ incidentesFiltrados.length }}</strong> incidentes asignados
                 </span>
               </td>
 
-              <!-- ACCIONES ADMIN -->
-              <td *ngIf="isAdmin">
+              <!-- ACCIONES -->
+              <td>
                 <div class="btn-group-vertical btn-group-sm">
-                  <!-- Editar (Pendiente) -->
+                  
+                  <!-- 🆕 BOTÓN TOMAR (Mantenimiento - solo si está pendiente y sin asignar) -->
+                  <button 
+                    class="btn btn-success mb-1" 
+                    (click)="tomarIncidente(inc)"
+                    *ngIf="puedoTomarIncidente(inc)">
+                    <i class="bi bi-hand-thumbs-up-fill"></i> Tomar
+                  </button>
+
+                  <!-- 🆕 BADGE "YA LO TOMÉ" -->
+                  <span class="badge bg-primary mb-1" *ngIf="yoLoTome(inc) && inc.estado === 'en_proceso'">
+                    <i class="bi bi-person-check"></i> Lo tomaste
+                  </span>
+
+                  <!-- 🆕 MENSAJE PARA OTROS (Ya fue tomado por alguien más) -->
+                  <span class="badge bg-secondary mb-1" 
+                        *ngIf="isMantenimiento && inc.id_mantenimiento_asignado && !yoLoTome(inc) && inc.estado !== 'completado'">
+                    <i class="bi bi-lock-fill"></i> Tomado por otro
+                  </span>
+
+                  <!-- ADMIN: Editar (Pendiente) -->
                   <button 
                     class="btn btn-warning mb-1" 
                     (click)="editarIncidente(inc)"
-                    *ngIf="inc.estado === 'pendiente'">
+                    *ngIf="isAdmin && inc.estado === 'pendiente'">
                     <i class="bi bi-pencil"></i> Editar
                   </button>
 
-                  <!-- Iniciar (Pendiente) -->
-                  <button 
-                    class="btn btn-success mb-1" 
-                    (click)="iniciarIncidenteAdmin(inc)"
-                    *ngIf="inc.estado === 'pendiente'">
-                    <i class="bi bi-play-fill"></i> Iniciar
-                  </button>
-
-                  <!-- Eliminar -->
+                  <!-- ADMIN: Eliminar -->
                   <button 
                     class="btn btn-danger mb-1" 
-                    (click)="eliminarIncidente(inc)">
+                    (click)="eliminarIncidente(inc)"
+                    *ngIf="isAdmin">
                     <i class="bi bi-trash"></i> Eliminar
                   </button>
 
-                  <!-- Reabrir (Completado + Modo Editor) -->
+                  <!-- ADMIN: Reabrir (Completado + Modo Editor) -->
                   <button 
                     class="btn btn-outline-warning mb-1" 
                     (click)="reabrirIncidente(inc)"
-                    *ngIf="inc.estado === 'completado' && modoEditor">
+                    *ngIf="isAdmin && inc.estado === 'completado' && modoEditor">
                     <i class="bi bi-arrow-counterclockwise"></i> Reabrir
                   </button>
 
-                  <!-- Badge Completado -->
+                  <!-- Badge Completado (para ver, no editar) -->
                   <span class="badge bg-success" *ngIf="inc.estado === 'completado' && !modoEditor">
                     <i class="bi bi-check-circle-fill"></i> Completado
+                  </span>
+
+                  <!-- JEFA AMA: Solo vista -->
+                  <span class="badge bg-info" *ngIf="isJefaAma">
+                    <i class="bi bi-eye"></i> Solo vista
                   </span>
                 </div>
               </td>
             </tr>
             <tr *ngIf="incidentesFiltrados.length === 0">
-              <td [attr.colspan]="isAdmin ? 9 : 8" class="text-center text-muted py-4">
+              <td colspan="9" class="text-center text-muted py-4">
                 <i class="bi bi-inbox" style="font-size: 2rem;"></i>
                 <p class="mb-0 mt-2">
-                  {{ trabajadorSeleccionado ? 'No hay incidentes para este trabajador' : 'No hay incidentes registrados' }}
+                  <span *ngIf="isMantenimiento">No hay incidentes disponibles para tomar</span>
+                  <span *ngIf="!isMantenimiento">No hay incidentes registrados</span>
                 </p>
               </td>
             </tr>
@@ -248,12 +296,13 @@ Mostrando <strong>{{ incidentesFiltrados.length }}</strong> incidentes asignados
                 placeholder="Describe detalladamente el problema encontrado.
 
 Incluye:
-- Si es en habitación, especifica el número de habitación.
-- Qué está fallando exactamente.
-- Cualquier detalle importante."
+- Si es en habitación, especifica el número (Ej: Habitación 105)
+- Si es en pasillo, especifica el piso (Ej: Pasillo piso 3)
+- Qué está fallando exactamente
+- Cualquier detalle importante"
                 required></textarea>
               <small class="text-muted">
-                <i class="bi bi-info-circle"></i> Tip: Sé lo más específico posible para que mantenimiento pueda atender rápidamente
+                <i class="bi bi-info-circle"></i> El incidente será visible para todo el equipo de Mantenimiento
               </small>
             </div>
           </div>
@@ -313,7 +362,7 @@ Incluye:
                 <th>Área</th>
                 <th>Descripción</th>
                 <th>Estado</th>
-                <th>Asignado a</th>
+                <th>Tomado por</th>
                 <th>Hora</th>
               </tr>
             </thead>
@@ -332,7 +381,7 @@ Incluye:
                   </span>
                 </td>
                 <td>
-                  <small>{{ inc.nombre_mantenimiento_asignado || 'Sin asignar' }}</small>
+                  <small>{{ inc.nombre_mantenimiento_asignado || 'Sin tomar' }}</small>
                 </td>
                 <td>
                   <small>{{ formatearFecha(inc.fecha_reporte) }}</small>

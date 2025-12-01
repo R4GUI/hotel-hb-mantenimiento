@@ -28,7 +28,7 @@ export interface Mantenimiento {
   id_equipo?: string;
   descripcion?: string;
   prioridad?: string;
-  estado?: string; // programado, orden_generada, activo, completado
+  estado?: string;
   fecha_programada?: any;
   fecha_completado?: any;
   fecha_inicio?: any;
@@ -52,7 +52,7 @@ export interface User {
   id: string;
   nombre: string;
   usuario: string;
-  rol: string;
+  rol: string; // 'admin', 'mantenimiento', 'amadellaves', 'jefaama'
 }
 
 export interface Incidente {
@@ -64,11 +64,11 @@ export interface Incidente {
   piso?: string;
   descripcion: string;
   prioridad: string;
-  estado: string;
+  estado: string; // 'pendiente', 'en_proceso', 'completado', 'no_completado'
   id_ama_llaves: string;
   nombre_ama_llaves: string;
-  id_mantenimiento_asignado?: string;
-  nombre_mantenimiento_asignado?: string;
+  id_mantenimiento_asignado?: string; // 🆕 ID del trabajador que lo tomó
+  nombre_mantenimiento_asignado?: string; // 🆕 Nombre del trabajador
   fecha_reporte: any;
   fecha_inicio?: any;
   fecha_completado?: any;
@@ -76,28 +76,6 @@ export interface Incidente {
   trabajo_realizado?: string;
   foto_antes?: string;
   foto_despues?: string;
-}
-
-export interface HorarioSemanal {
-  id_horario?: string;
-  id_usuario: string;
-  nombre_usuario: string;
-  semana_inicio: any;
-  semana_fin: any;
-  lunes: TurnoHorario;
-  martes: TurnoHorario;
-  miercoles: TurnoHorario;
-  jueves: TurnoHorario;
-  viernes: TurnoHorario;
-  sabado: TurnoHorario;
-  domingo: TurnoHorario;
-}
-
-export interface TurnoHorario {
-  trabaja: boolean;
-  hora_entrada?: string;
-  hora_salida?: string;
-  notas?: string;
 }
 
 export interface MantenimientoCalendario {
@@ -118,7 +96,6 @@ export interface MantenimientoCalendario {
   frecuencia?: string;
 }
 
-// 🆕 NUEVAS INTERFACES PARA REPORTES
 export interface ReporteDiario {
   fecha: Date;
   tipo: 'mantenimiento' | 'incidente';

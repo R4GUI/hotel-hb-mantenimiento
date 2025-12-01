@@ -11,9 +11,8 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
           <!-- Dashboard (Admin y Mantenimiento) -->
-          <li class="nav-item" *ngIf="!isAmaDeLlaves">
-            <!-- <a class="nav-link" routerLink="/dashboard" routerLinkActive="active" style="cursor: pointer;"> -->
-              <a class="nav-link" [routerLink]="['/dashboard']" routerLinkActive="active" style="cursor: pointer;">
+          <li class="nav-item" *ngIf="!isAmaDeLlaves && !isJefaAma">
+            <a class="nav-link" routerLink="/dashboard" routerLinkActive="active" style="cursor: pointer;">
               <i class="bi bi-speedometer2"></i> Dashboard
             </a>
           </li>
@@ -29,21 +28,11 @@
               <i class="bi bi-calendar3"></i> Calendario
             </a>
           </li>
-          <li class="nav-item" *ngIf="isAdmin">
-            <a class="nav-link" routerLink="/horarios" routerLinkActive="active" style="cursor: pointer;">
-              <i class="bi bi-calendar-week"></i> Horarios
-            </a>
-          </li>
 
           <!-- MANTENIMIENTO -->
           <li class="nav-item" *ngIf="isMantenimiento">
             <a class="nav-link" routerLink="/para-hoy" routerLinkActive="active" style="cursor: pointer;">
               <i class="bi bi-calendar-check"></i> Para Hoy
-            </a>
-          </li>
-          <li class="nav-item" *ngIf="isMantenimiento">
-            <a class="nav-link" routerLink="/horarios" routerLinkActive="active" style="cursor: pointer;">
-              <i class="bi bi-calendar-week"></i> Mi Horario
             </a>
           </li>
 
@@ -54,8 +43,8 @@
             </a>
           </li>
 
-          <!-- INCIDENTES: Admin y Ama de Llaves -->
-          <li class="nav-item" *ngIf="isAmaDeLlaves || isAdmin">
+          <!-- INCIDENTES: Admin, Jefa Ama, Ama de Llaves -->
+          <li class="nav-item" *ngIf="isAmaDeLlaves || isAdmin || isJefaAma">
             <a class="nav-link" routerLink="/incidentes" routerLinkActive="active" style="cursor: pointer;">
               <i class="bi bi-exclamation-triangle"></i> Incidentes
             </a>
@@ -76,22 +65,6 @@
       </div>
     </div>
   </nav>
-
-
-  <!-- 🔍 DEBUG TEMPORAL - VER QUÉ PASA
-  <div style="background: yellow; padding: 10px; color: black;" *ngIf="!isLoginPage()">
-    <strong>DEBUG:</strong> 
-    Usuario: {{ currentUser?.nombre }} | 
-    Rol: {{ currentUser?.rol }} | 
-    isAdmin: {{ isAdmin }} | 
-    isMantenimiento: {{ isMantenimiento }} | 
-    isAmaDeLlaves: {{ isAmaDeLlaves }}
-    <br>
-    <button (click)="testNavigation('/dashboard')" class="btn btn-sm btn-primary">TEST Dashboard</button>
-    <button (click)="testNavigation('/configuracion')" class="btn btn-sm btn-success">TEST Config</button>
-  </div> -->
-
-  <!-- Contenido Principal -->
 
   <!-- Contenido Principal -->
   <div class="content" [class.login-content]="isLoginPage()">

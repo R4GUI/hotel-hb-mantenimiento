@@ -18,6 +18,7 @@ export class AppComponent implements OnInit {
   isAdmin: boolean = false;
   isMantenimiento: boolean = false;
   isAmaDeLlaves: boolean = false;
+  isJefaAma: boolean = false;
 
   constructor(
     private router: Router,
@@ -46,6 +47,7 @@ export class AppComponent implements OnInit {
       console.log('isAdmin:', this.isAdmin); // 🔍 DEBUG
       console.log('isMantenimiento:', this.isMantenimiento); // 🔍 DEBUG
       console.log('isAmaDeLlaves:', this.isAmaDeLlaves); // 🔍 DEBUG
+      console.log('isJefaAma', this.isJefaAma);
     }
   }
 

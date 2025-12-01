@@ -34,10 +34,15 @@ export class IncidentesComponent implements OnInit {
     fecha_reporte: new Date()
   };
   
+  // Roles
   isAdmin: boolean = false;
   isAmaDeLlaves: boolean = false;
+  isMantenimiento: boolean = false;
+  isJefaAma: boolean = false; // 🆕 NUEVO ROL
 
-  pisos: string[] = ['PB', '1', '2', '3', '4', '5'];
+  // Usuario actual
+  currentUserId: string = '';
+  currentUserName: string = '';
 
   // Modo Editor Secreto
   modoEditor: boolean = false;
@@ -47,14 +52,16 @@ export class IncidentesComponent implements OnInit {
   mensajeAlerta: string = '';
   tipoAlerta: 'success' | 'error' | 'warning' | 'info' = 'info';
 
-  // Historial por día
+  // Historial
   mostrarModalHistorial: boolean = false;
   fechaHistorial: string = '';
   incidentesHistorial: Incidente[] = [];
 
-  // 🆕 FILTRO POR TRABAJADOR
+  // 🆕 FILTROS PARA JEFA DE AMA
   trabajadoresFiltro: any[] = [];
+  amasLlavesFiltro: any[] = [];
   trabajadorSeleccionado: string = '';
+  amaLlavesSeleccionada: string = '';
 
   constructor(
     private apiService: ApiService,
@@ -70,26 +77,34 @@ export class IncidentesComponent implements OnInit {
 
   verificarRol(): void {
     const user = this.authService.getCurrentUser();
+    this.currentUserId = user?.id || '';
+    this.currentUserName = user?.nombre || '';
+    
     this.isAdmin = user?.rol === 'admin';
     this.isAmaDeLlaves = user?.rol === 'amadellaves';
+    this.isMantenimiento = user?.rol === 'mantenimiento';
+    this.isJefaAma = user?.rol === 'jefaama'; // 🆕 NUEVO ROL
   }
 
   async cargarDatos(): Promise<void> {
     try {
       this.areas = await this.apiService.getAreas();
       await this.cargarIncidentes();
-      await this.cargarTrabajadores();
+      await this.cargarFiltros();
     } catch (error) {
       console.error('Error cargando datos:', error);
     }
   }
 
-  // 🆕 CARGAR TRABAJADORES
-  async cargarTrabajadores(): Promise<void> {
+  // 🆕 CARGAR FILTROS
+  async cargarFiltros(): Promise<void> {
     try {
-      this.trabajadoresFiltro = await this.apiService.getUsuariosByRol('mantenimiento');
+      if (this.isAdmin || this.isJefaAma) {
+        this.trabajadoresFiltro = await this.apiService.getUsuariosByRol('mantenimiento');
+        this.amasLlavesFiltro = await this.apiService.getUsuariosByRol('amadellaves');
+      }
     } catch (error) {
-      console.error('Error cargando trabajadores:', error);
+      console.error('Error cargando filtros:', error);
     }
   }
 
@@ -110,19 +125,109 @@ export class IncidentesComponent implements OnInit {
     };
   }
 
+  // async cargarIncidentes(): Promise<void> {
+  //   try {
+  //     const user = this.authService.getCurrentUser();
+      
+  //     if (this.isAdmin || this.isJefaAma) {
+  //       // Admin y Jefa ven TODOS
+  //       this.incidentes = await this.apiService.getIncidentes();
+  //     } else if (this.isAmaDeLlaves) {
+  //       // Ama de llaves solo ve los suyos
+  //       this.incidentes = await this.apiService.getIncidentesByAma(user?.id || '');
+  //     } else if (this.isMantenimiento) {
+  //       // Mantenimiento ve TODOS los pendientes y los que están en proceso o completados por ellos
+  //       const todosIncidentes = await this.apiService.getIncidentes();
+  //       this.incidentes = todosIncidentes.filter(inc => 
+  //         inc.estado === 'pendiente' || // Todos los pendientes
+  //         inc.id_mantenimiento_asignado === user?.id // O los que tomó este usuario
+  //       );
+  //     }
+      
+  //     console.log('Incidentes cargados:', this.incidentes.length);
+  //   } catch (error) {
+  //     console.error('Error cargando incidentes:', error);
+  //   }
+  // }
+// async cargarIncidentes(): Promise<void> {
+//     try {
+//       const user = this.authService.getCurrentUser();
+      
+//       if (this.isAdmin || this.isJefaAma) {
+//         // Admin y Jefa ven TODOS
+//         this.incidentes = await this.apiService.getIncidentes();
+//       } else if (this.isAmaDeLlaves) {
+//         // Ama de llaves solo ve los suyos
+//         this.incidentes = await this.apiService.getIncidentesByAma(user?.id || '');
+//       } else if (this.isMantenimiento) {
+//         // 🔥 CORREGIDO: Mantenimiento ve:
+//         // 1. TODOS los pendientes (sin asignar)
+//         // 2. TODOS los que están en proceso (sin importar quién los tomó)
+//         // 3. Los completados que ÉL tomó
+//         const todosIncidentes = await this.apiService.getIncidentes();
+//         this.incidentes = todosIncidentes.filter(inc => {
+//           // Mostrar si está pendiente
+//           if (inc.estado === 'pendiente') {
+//             return true;
+//           }
+//           // Mostrar si está en proceso (todos, para que vean quién está trabajando)
+//           if (inc.estado === 'en_proceso') {
+//             return true;
+//           }
+//           // Mostrar completados solo si YO lo completé
+//           if (inc.estado === 'completado' && inc.id_mantenimiento_asignado === user?.id) {
+//             return true;
+//           }
+//           return false;
+//         });
+//       }
+      
+//       console.log('✅ Incidentes cargados:', this.incidentes.length);
+//     } catch (error) {
+//       console.error('❌ Error cargando incidentes:', error);
+//     }
+//   }
+
   async cargarIncidentes(): Promise<void> {
     try {
       const user = this.authService.getCurrentUser();
+      console.log('🔍 Usuario actual:', user);
       
-      if (this.isAdmin) {
+      if (this.isAdmin || this.isJefaAma) {
         this.incidentes = await this.apiService.getIncidentes();
+        console.log('👑 Admin/Jefa ve todos:', this.incidentes.length);
       } else if (this.isAmaDeLlaves) {
         this.incidentes = await this.apiService.getIncidentesByAma(user?.id || '');
+        console.log('🧹 Ama de Llaves ve suyos:', this.incidentes.length);
+      } else if (this.isMantenimiento) {
+        const todosIncidentes = await this.apiService.getIncidentes();
+        console.log('🔧 Mantenimiento - Total incidentes en BD:', todosIncidentes.length);
+        
+        this.incidentes = todosIncidentes.filter(inc => {
+          // Pendiente: sin asignar (null o vacío)
+          const esPendiente = inc.estado === 'pendiente' && 
+                             (!inc.id_mantenimiento_asignado || inc.id_mantenimiento_asignado === '');
+          
+          // En proceso: con alguien asignado
+          const esEnProceso = inc.estado === 'en_proceso';
+          
+          // Completado: solo los míos
+          const esCompletadoPorMi = inc.estado === 'completado' && 
+                                   inc.id_mantenimiento_asignado === user?.id;
+          
+          const mostrar = esPendiente || esEnProceso || esCompletadoPorMi;
+          
+          console.log(`🔍 "${inc.area}" - Estado: "${inc.estado}" - Asignado: "${inc.id_mantenimiento_asignado}" - Mostrar: ${mostrar}`);
+          
+          return mostrar;
+        });
+        
+        console.log('✅ Incidentes filtrados para mantenimiento:', this.incidentes.length);
       }
       
-      console.log('Incidentes cargados:', this.incidentes.length);
+      console.log('📊 Total incidentes mostrados:', this.incidentes.length);
     } catch (error) {
-      console.error('Error cargando incidentes:', error);
+      console.error('❌ Error cargando incidentes:', error);
     }
   }
 
@@ -142,7 +247,6 @@ export class IncidentesComponent implements OnInit {
       return;
     }
 
-    // 🔥 Generar ubicación automática desde la descripción
     this.nuevoIncidente.ubicacion = this.nuevoIncidente.area;
     this.nuevoIncidente.es_habitacion = true;
     this.nuevoIncidente.numero_habitacion = '';
@@ -156,14 +260,9 @@ export class IncidentesComponent implements OnInit {
         );
         this.mostrarMensaje('Incidente actualizado correctamente', 'success');
       } else {
-        const incidenteCreado = await this.apiService.createIncidente(this.nuevoIncidente);
-        const asignado = await this.apiService.asignarMantenimientoAleatorio(incidenteCreado);
-        
-        if (asignado) {
-          this.mostrarMensaje('✅ Incidente reportado y asignado automáticamente', 'success');
-        } else {
-          this.mostrarMensaje('⚠️ Incidente reportado. No hay personal disponible en este momento', 'warning');
-        }
+        // 🆕 YA NO SE ASIGNA AUTOMÁTICAMENTE
+        await this.apiService.createIncidente(this.nuevoIncidente);
+        this.mostrarMensaje('✅ Incidente reportado correctamente. Área de Mantenimiento lo verá.', 'success');
       }
       
       await this.cargarIncidentes();
@@ -172,6 +271,40 @@ export class IncidentesComponent implements OnInit {
       console.error('Error guardando incidente:', error);
       this.mostrarMensaje('Error al guardar incidente', 'error');
     }
+  }
+
+  // 🆕 MÉTODO PARA "TOMAR" UN INCIDENTE (Mantenimiento)
+  async tomarIncidente(incidente: Incidente): Promise<void> {
+    if (!incidente.id_incidente) return;
+    
+    if (!confirm('¿Deseas tomar este incidente y comenzar a trabajar en él?')) return;
+    
+    try {
+      await this.apiService.updateIncidente(incidente.id_incidente, {
+        estado: 'en_proceso',
+        id_mantenimiento_asignado: this.currentUserId,
+        nombre_mantenimiento_asignado: this.currentUserName,
+        fecha_inicio: new Date()
+      });
+      
+      this.mostrarMensaje('✅ Incidente tomado. Ahora aparece en tu lista de trabajos.', 'success');
+      await this.cargarIncidentes();
+    } catch (error) {
+      console.error('Error tomando incidente:', error);
+      this.mostrarMensaje('Error al tomar incidente', 'error');
+    }
+  }
+
+// 🆕 VERIFICAR SI PUEDO TOMAR EL INCIDENTE
+  puedoTomarIncidente(incidente: Incidente): boolean {
+    return this.isMantenimiento && 
+           incidente.estado === 'pendiente' && 
+           (!incidente.id_mantenimiento_asignado || incidente.id_mantenimiento_asignado === ''); // 🔥 ACEPTAR null O vacío
+  }
+
+  // 🆕 VERIFICAR SI YO LO TOMÉ
+  yoLoTome(incidente: Incidente): boolean {
+    return incidente.id_mantenimiento_asignado === this.currentUserId;
   }
 
   async agregarObservacion(incidente: Incidente): Promise<void> {
@@ -239,7 +372,10 @@ export class IncidentesComponent implements OnInit {
     try {
       await this.apiService.updateIncidente(incidente.id_incidente, {
         estado: 'pendiente',
+        id_mantenimiento_asignado: '',
+        nombre_mantenimiento_asignado: '',
         fecha_completado: null,
+        fecha_inicio: null,
         trabajo_realizado: '',
         observaciones_ama: ''
       });
@@ -286,10 +422,15 @@ export class IncidentesComponent implements OnInit {
       
       let allIncidentes: Incidente[] = [];
       
-      if (this.isAdmin) {
+      if (this.isAdmin || this.isJefaAma) {
         allIncidentes = await this.apiService.getIncidentes();
       } else if (this.isAmaDeLlaves) {
         allIncidentes = await this.apiService.getIncidentesByAma(user?.id || '');
+      } else if (this.isMantenimiento) {
+        const todosIncidentes = await this.apiService.getIncidentes();
+        allIncidentes = todosIncidentes.filter(inc => 
+          inc.id_mantenimiento_asignado === user?.id
+        );
       }
 
       this.incidentesHistorial = allIncidentes.filter(inc => {
@@ -334,7 +475,7 @@ export class IncidentesComponent implements OnInit {
         inc.ubicacion,
         inc.descripcion,
         inc.estado || '',
-        inc.nombre_mantenimiento_asignado || 'Sin asignar'
+        inc.nombre_mantenimiento_asignado || 'Sin tomar'
       ]);
 
       autoTable(doc, {
@@ -356,16 +497,28 @@ export class IncidentesComponent implements OnInit {
 
   // ============ FILTROS ============
   get incidentesFiltrados(): Incidente[] {
-    if (!this.trabajadorSeleccionado) {
-      return this.incidentes;
+    let filtrados = this.incidentes;
+
+    // Filtro por trabajador de mantenimiento
+    if (this.trabajadorSeleccionado) {
+      filtrados = filtrados.filter(inc => 
+        inc.id_mantenimiento_asignado === this.trabajadorSeleccionado
+      );
     }
-    return this.incidentes.filter(inc => 
-      inc.id_mantenimiento_asignado === this.trabajadorSeleccionado
-    );
+
+    // Filtro por ama de llaves (solo para jefaama)
+    if (this.amaLlavesSeleccionada && this.isJefaAma) {
+      filtrados = filtrados.filter(inc => 
+        inc.id_ama_llaves === this.amaLlavesSeleccionada
+      );
+    }
+
+    return filtrados;
   }
 
-  limpiarFiltro(): void {
+  limpiarFiltros(): void {
     this.trabajadorSeleccionado = '';
+    this.amaLlavesSeleccionada = '';
   }
 
   // ============ HELPERS ============
@@ -415,9 +568,14 @@ export class IncidentesComponent implements OnInit {
   cerrarAlerta(): void {
     this.mostrarAlerta = false;
   }
-    // 🆕 MÉTODO PARA OBTENER NOMBRE DE TRABAJADOR
+
   getNombreTrabajador(idTrabajador: string): string {
     const trabajador = this.trabajadoresFiltro.find(t => t.id === idTrabajador);
     return trabajador ? trabajador.nombre : 'Desconocido';
+  }
+
+  getNombreAmaLlaves(idAma: string): string {
+    const ama = this.amasLlavesFiltro.find(a => a.id === idAma);
+    return ama ? ama.nombre : 'Desconocido';
   }
 }

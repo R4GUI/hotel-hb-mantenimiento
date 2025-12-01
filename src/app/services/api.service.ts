@@ -19,8 +19,8 @@ import {
   Mantenimiento, 
   Refaccion,
   Incidente,
-  HorarioSemanal,
-  MantenimientoCalendario
+  // HorarioSemanal, //eliminar calendario del api service (Que no sea aleatorio los incidentes de las amas de llaves)
+  MantenimientoCalendario 
 } from '../models/interfaces';
 
 @Injectable({
@@ -363,9 +363,44 @@ export class ApiService {
     }
   }
 
+  // async createIncidente(incidente: Incidente): Promise<Incidente> {
+  //   const docRef = await addDoc(collection(this.db, 'incidentes'), {
+  //     ...incidente,
+  //     fecha_reporte: Timestamp.now(),
+  //     created_at: Timestamp.now()
+  //   });
+
+  //   return { id_incidente: docRef.id, ...incidente };
+  // }
+
+
+  // async createIncidente(incidente: Incidente): Promise<Incidente> {
+  //   const docRef = await addDoc(collection(this.db, 'incidentes'), {
+  //     ...incidente,
+  //     estado: 'pendiente', // 🆕 Siempre inicia en pendiente
+  //     id_mantenimiento_asignado: null, // 🆕 Sin asignar hasta que alguien lo tome
+  //     nombre_mantenimiento_asignado: null,
+  //     fecha_reporte: Timestamp.now(),
+  //     created_at: Timestamp.now()
+  //   });
+
+  //   return { id_incidente: docRef.id, ...incidente };
+  // }
   async createIncidente(incidente: Incidente): Promise<Incidente> {
     const docRef = await addDoc(collection(this.db, 'incidentes'), {
-      ...incidente,
+      area: incidente.area,
+      ubicacion: incidente.ubicacion || '',
+      es_habitacion: incidente.es_habitacion !== undefined ? incidente.es_habitacion : true,
+      numero_habitacion: incidente.numero_habitacion || '',
+      piso: incidente.piso || '',
+      descripcion: incidente.descripcion,
+      prioridad: incidente.prioridad || 'media',
+      estado: 'pendiente',
+      id_ama_llaves: incidente.id_ama_llaves,
+      nombre_ama_llaves: incidente.nombre_ama_llaves,
+      // 🔥 NO GUARDAR ESTOS CAMPOS SI ESTÁN VACÍOS (para evitar null)
+      ...(incidente.id_mantenimiento_asignado && { id_mantenimiento_asignado: incidente.id_mantenimiento_asignado }),
+      ...(incidente.nombre_mantenimiento_asignado && { nombre_mantenimiento_asignado: incidente.nombre_mantenimiento_asignado }),
       fecha_reporte: Timestamp.now(),
       created_at: Timestamp.now()
     });
@@ -383,60 +418,6 @@ export class ApiService {
     await deleteDoc(doc(this.db, 'incidentes', id));
   }
 
-  // ============ HORARIOS SEMANALES ============
-  async getHorarios(): Promise<HorarioSemanal[]> {
-    try {
-      const querySnapshot = await getDocs(collection(this.db, 'horarios'));
-      
-      return querySnapshot.docs.map(doc => ({
-        id_horario: doc.id,
-        ...doc.data()
-      } as HorarioSemanal));
-    } catch (error) {
-      console.error('Error getting horarios:', error);
-      return [];
-    }
-  }
-
-  async getHorarioByUsuario(idUsuario: string): Promise<HorarioSemanal | null> {
-    try {
-      const q = query(
-        collection(this.db, 'horarios'),
-        where('id_usuario', '==', idUsuario)
-      );
-      const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) return null;
-      
-      const doc = querySnapshot.docs[0];
-      return {
-        id_horario: doc.id,
-        ...doc.data()
-      } as HorarioSemanal;
-    } catch (error) {
-      console.error('Error getting horario by usuario:', error);
-      return null;
-    }
-  }
-
-  async createHorario(horario: HorarioSemanal): Promise<HorarioSemanal> {
-    const docRef = await addDoc(collection(this.db, 'horarios'), {
-      ...horario,
-      created_at: Timestamp.now()
-    });
-
-    return { id_horario: docRef.id, ...horario };
-  }
-
-  async updateHorario(id: string, horario: Partial<HorarioSemanal>): Promise<HorarioSemanal> {
-    const docRef = doc(this.db, 'horarios', id);
-    await updateDoc(docRef, { ...horario });
-    return { id_horario: id, ...horario } as HorarioSemanal;
-  }
-
-  async deleteHorario(id: string): Promise<void> {
-    await deleteDoc(doc(this.db, 'horarios', id));
-  }
 
   // ============ CALENDARIO DE MANTENIMIENTOS ============
   async getCalendario(): Promise<MantenimientoCalendario[]> {
